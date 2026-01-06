@@ -1,0 +1,303 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PECS Communication</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <!-- Home Screen -->
+    <div id="homeScreen" class="screen active">
+        <div class="language-toggle">
+            <button id="langToggle" class="lang-btn" aria-label="Toggle language">
+                <span class="flag">🇻🇳</span>
+            </button>
+        </div>
+        <div class="home-container">
+            <button class="main-btn" id="createCardBtn">
+                <span data-en="Create Card" data-vi="Tạo Thẻ">Create Card</span>
+            </button>
+            <button class="main-btn" id="makeSentenceBtn">
+                <span data-en="Make Sentence" data-vi="Tạo Câu">Make Sentence</span>
+            </button>
+            <button class="main-btn" id="editCardsBtn">
+                <span data-en="Edit Cards" data-vi="Sửa Thẻ">Edit Cards</span>
+            </button>
+            <button class="main-btn" id="placeholderBtn" style="opacity: 0.5; cursor: not-allowed;" disabled>
+                <span data-en="Coming Soon" data-vi="Sắp có">Coming Soon</span>
+            </button>
+        </div>
+    </div>
+
+    <!-- Edit Cards Screen -->
+    <div id="editCardsScreen" class="screen">
+        <div class="language-toggle">
+            <button id="langToggleEdit" class="lang-btn" aria-label="Toggle language">
+                <span class="flag">🇻🇳</span>
+            </button>
+        </div>
+        <div class="screen-header">
+            <button class="back-btn" id="backFromEdit">
+                <span data-en="← Back" data-vi="← Quay lại">← Back</span>
+            </button>
+            <h1 data-en="Edit Cards" data-vi="Sửa Thẻ">Edit Cards</h1>
+        </div>
+        
+        <!-- Category Selection for Editing -->
+        <div id="editCategorySelection" class="category-container">
+            <div class="category-grid">
+                <div class="category-tile" data-category="people" data-edit="true">
+                    <span data-en="People" data-vi="Người">People</span>
+                </div>
+                <div class="category-tile" data-category="actions" data-edit="true">
+                    <span data-en="Actions" data-vi="Hành động">Actions</span>
+                </div>
+                <div class="category-tile" data-category="food" data-edit="true">
+                    <span data-en="Food" data-vi="Thức ăn">Food</span>
+                </div>
+                <div class="category-tile" data-category="place" data-edit="true">
+                    <span data-en="Place" data-vi="Nơi chốn">Place</span>
+                </div>
+                <div class="category-tile" data-category="things" data-edit="true">
+                    <span data-en="Things" data-vi="Đồ vật">Things</span>
+                </div>
+                <div class="category-tile" data-category="animals" data-edit="true">
+                    <span data-en="Animals" data-vi="Động vật">Animals</span>
+                </div>
+                <div class="category-tile" data-category="wants" data-edit="true">
+                    <span data-en="Wants" data-vi="Muốn">Wants</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- Cards in Category -->
+        <div id="categoryCardsView" class="category-cards-view hidden">
+            <h2 id="categoryCardsTitle" class="category-cards-title"></h2>
+            <div id="categoryCardsGrid" class="category-cards-grid"></div>
+        </div>
+    </div>
+
+    <!-- Create Card Screen -->
+    <div id="createCardScreen" class="screen">
+        <div class="language-toggle">
+            <button id="langToggleCreate" class="lang-btn" aria-label="Toggle language">
+                <span class="flag">🇻🇳</span>
+            </button>
+        </div>
+        <div class="screen-header">
+            <button class="back-btn" id="backFromCreate">
+                <span data-en="← Back" data-vi="← Quay lại">← Back</span>
+            </button>
+            <h1 data-en="Create Card" data-vi="Tạo Thẻ">Create Card</h1>
+        </div>
+        
+        <!-- Category Selection -->
+        <div id="categorySelection" class="category-container">
+            <div class="category-grid">
+                <div class="category-tile" data-category="people">
+                    <span data-en="People" data-vi="Người">People</span>
+                </div>
+                <div class="category-tile" data-category="actions">
+                    <span data-en="Actions" data-vi="Hành động">Actions</span>
+                </div>
+                <div class="category-tile" data-category="food">
+                    <span data-en="Food" data-vi="Thức ăn">Food</span>
+                </div>
+                <div class="category-tile" data-category="place">
+                    <span data-en="Place" data-vi="Nơi chốn">Place</span>
+                </div>
+                <div class="category-tile" data-category="things">
+                    <span data-en="Things" data-vi="Đồ vật">Things</span>
+                </div>
+                <div class="category-tile" data-category="animals">
+                    <span data-en="Animals" data-vi="Động vật">Animals</span>
+                </div>
+                <div class="category-tile" data-category="wants">
+                    <span data-en="Wants" data-vi="Muốn">Wants</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- Card Creation Form -->
+        <div id="cardForm" class="card-form hidden">
+            <div class="upload-section">
+                <input type="file" id="imageUpload" accept="image/*" class="hidden">
+                <label for="imageUpload" class="upload-label">
+                    <span data-en="Upload Image" data-vi="Tải ảnh lên">Upload Image</span>
+                </label>
+                <div id="imagePreview" class="image-preview hidden"></div>
+                <div id="cropContainer" class="crop-container hidden">
+                    <div class="crop-wrapper">
+                        <div id="cropViewport" class="crop-viewport">
+                            <img id="cropImage" class="crop-image" alt="Crop image">
+                        </div>
+                    </div>
+                    <div class="zoom-controls">
+                        <button id="zoomOutBtn" class="zoom-btn" aria-label="Zoom out">
+                            <span>−</span>
+                        </button>
+                        <span id="zoomLevel" class="zoom-level">100%</span>
+                        <button id="zoomInBtn" class="zoom-btn" aria-label="Zoom in">
+                            <span>+</span>
+                        </button>
+                    </div>
+                    <div class="crop-controls">
+                        <button id="cropBtn" class="action-btn">
+                            <span data-en="Crop" data-vi="Cắt">Crop</span>
+                        </button>
+                    </div>
+                </div>
+            </div>
+            <div class="text-input-section">
+                <input type="text" id="cardText" class="card-text-input" 
+                       placeholder="Enter text (English)" 
+                       data-placeholder-en="Enter text (English)" 
+                       data-placeholder-vi="Nhập văn bản (Tiếng Anh)">
+                <div class="translation-option">
+                    <label class="checkbox-label">
+                        <input type="checkbox" id="autoTranslateCheck" checked>
+                        <span data-en="Auto translate" data-vi="Tự động dịch">Auto translate</span>
+                    </label>
+                </div>
+                <div id="translatedText" class="translated-text"></div>
+                <input type="text" id="manualTranslation" class="card-text-input hidden" 
+                       placeholder="Enter translation manually" 
+                       data-placeholder-en="Enter translation manually" 
+                       data-placeholder-vi="Nhập bản dịch thủ công">
+            </div>
+            <button id="saveCardBtn" class="save-btn" disabled>
+                <span data-en="Save Card" data-vi="Lưu thẻ">Save Card</span>
+            </button>
+        </div>
+    </div>
+
+    <!-- Make Sentence Screen -->
+    <div id="makeSentenceScreen" class="screen">
+        <div class="language-toggle">
+            <button id="langToggleSentence" class="lang-btn" aria-label="Toggle language">
+                <span class="flag">🇻🇳</span>
+            </button>
+        </div>
+        <div class="screen-header">
+            <button class="back-btn" id="backFromSentence">
+                <span data-en="← Back" data-vi="← Quay lại">← Back</span>
+            </button>
+            <h1 data-en="Make Sentence" data-vi="Tạo Câu">Make Sentence</h1>
+        </div>
+        
+        <div class="sentence-container">
+            <div id="sentenceBar" class="sentence-bar">
+                <button class="add-slot-btn" id="addSlotBefore">
+                    <span>+</span>
+                </button>
+                <div class="sentence-slot fixed-slot" data-card-id="iwant">
+                    <img src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Crect fill='%234CAF50' width='100' height='100'/%3E%3Ctext x='50' y='60' font-size='40' fill='white' text-anchor='middle'%3EI WANT%3C/text%3E%3C/svg%3E" alt="I want">
+                    <span class="slot-text">I WANT</span>
+                </div>
+                <button class="add-slot-btn" id="addSlotAfter">
+                    <span>+</span>
+                </button>
+            </div>
+            
+            <div class="sentence-controls">
+                <button id="saveSentenceBtn" class="control-btn">
+                    <span data-en="Save Sentence" data-vi="Lưu câu">Save Sentence</span>
+                </button>
+                <button id="loadSentenceBtn" class="control-btn">
+                    <span data-en="Load Sentence" data-vi="Tải câu">Load Sentence</span>
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Card Library Modal -->
+    <div id="cardLibraryModal" class="modal hidden">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2 data-en="Select Card" data-vi="Chọn thẻ">Select Card</h2>
+                <button class="close-btn" id="closeLibrary">&times;</button>
+            </div>
+            <div id="cardLibrary" class="card-library"></div>
+            <div class="modal-footer">
+                <button id="editCardBtn" class="control-btn hidden">
+                    <span data-en="Edit Card" data-vi="Sửa thẻ">Edit Card</span>
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Load Sentence Modal -->
+    <div id="loadSentenceModal" class="modal hidden">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2 data-en="Load Sentence" data-vi="Tải câu">Load Sentence</h2>
+                <button class="close-btn" id="closeLoadModal">&times;</button>
+            </div>
+            <div id="sentencePresets" class="sentence-presets"></div>
+        </div>
+    </div>
+
+    <!-- Edit Card Modal -->
+    <div id="editCardModal" class="modal hidden">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2 data-en="Edit Card" data-vi="Sửa thẻ">Edit Card</h2>
+                <button class="close-btn" id="closeEditModal">&times;</button>
+            </div>
+            <div class="card-form">
+                <div class="upload-section">
+                    <input type="file" id="editImageUpload" accept="image/*" class="hidden">
+                    <label for="editImageUpload" class="upload-label">
+                        <span data-en="Change Image" data-vi="Đổi ảnh">Change Image</span>
+                    </label>
+                    <div id="editImagePreview" class="image-preview"></div>
+                    <div id="editCropContainer" class="crop-container hidden">
+                        <div class="crop-wrapper">
+                            <div id="editCropViewport" class="crop-viewport">
+                                <img id="editCropImage" class="crop-image" alt="Crop image">
+                            </div>
+                        </div>
+                        <div class="zoom-controls">
+                            <button id="editZoomOutBtn" class="zoom-btn" aria-label="Zoom out">
+                                <span>−</span>
+                            </button>
+                            <span id="editZoomLevel" class="zoom-level">100%</span>
+                            <button id="editZoomInBtn" class="zoom-btn" aria-label="Zoom in">
+                                <span>+</span>
+                            </button>
+                        </div>
+                        <div class="crop-controls">
+                            <button id="editCropBtn" class="action-btn">
+                                <span data-en="Crop" data-vi="Cắt">Crop</span>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+                <div class="text-input-section">
+                    <input type="text" id="editCardText" class="card-text-input" 
+                           placeholder="Enter text (English)" 
+                           data-placeholder-en="Enter text (English)" 
+                           data-placeholder-vi="Nhập văn bản (Tiếng Anh)">
+                    <div class="translation-option">
+                        <label class="checkbox-label">
+                            <input type="checkbox" id="editAutoTranslateCheck" checked>
+                            <span data-en="Auto translate" data-vi="Tự động dịch">Auto translate</span>
+                        </label>
+                    </div>
+                    <div id="editTranslatedText" class="translated-text"></div>
+                    <input type="text" id="editManualTranslation" class="card-text-input hidden" 
+                           placeholder="Enter translation manually" 
+                           data-placeholder-en="Enter translation manually" 
+                           data-placeholder-vi="Nhập bản dịch thủ công">
+                </div>
+                <button id="updateCardBtn" class="save-btn">
+                    <span data-en="Update Card" data-vi="Cập nhật thẻ">Update Card</span>
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <script src="app.js"></script>
+</body>
+</html>
