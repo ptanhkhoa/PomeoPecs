@@ -1,0 +1,118 @@
+{
+  "version": "1.0",
+  "cards": [
+    {
+      "id": "default-people-papa",
+      "category": "people",
+      "imageFilename": "papa.png",
+      "textEn": "Papa",
+      "textVi": "Bố",
+      "isDefault": true
+    },
+    {
+      "id": "default-people-mama",
+      "category": "people",
+      "imageFilename": "mama.png",
+      "textEn": "Mama",
+      "textVi": "Mẹ",
+      "isDefault": true
+    },
+    {
+      "id": "default-people-teacher",
+      "category": "people",
+      "imageFilename": "teacher.png",
+      "textEn": "Teacher",
+      "textVi": "Giáo viên",
+      "isDefault": true
+    },
+    {
+      "id": "default-people-teacher-assistant",
+      "category": "people",
+      "imageFilename": "teacher_assistant.png",
+      "textEn": "Teacher Assistant",
+      "textVi": "Trợ giảng",
+      "isDefault": true
+    },
+    {
+      "id": "default-actions-drink",
+      "category": "actions",
+      "imageFilename": "drink.png",
+      "textEn": "Drink",
+      "textVi": "Uống",
+      "isDefault": true
+    },
+    {
+      "id": "default-actions-eat",
+      "category": "actions",
+      "imageFilename": "eat.png",
+      "textEn": "Eat",
+      "textVi": "Ăn",
+      "isDefault": true
+    },
+    {
+      "id": "default-actions-open",
+      "category": "actions",
+      "imageFilename": "open.png",
+      "textEn": "Open",
+      "textVi": "Mở",
+      "isDefault": true
+    },
+    {
+      "id": "default-actions-watch",
+      "category": "actions",
+      "imageFilename": "watch.png",
+      "textEn": "Watch",
+      "textVi": "Xem",
+      "isDefault": true
+    },
+    {
+      "id": "default-actions-help",
+      "category": "actions",
+      "imageFilename": "help.png",
+      "textEn": "Help",
+      "textVi": "Giúp",
+      "isDefault": true
+    },
+    {
+      "id": "default-things-door",
+      "category": "things",
+      "imageFilename": "door.png",
+      "textEn": "Door",
+      "textVi": "Cửa",
+      "isDefault": true
+    },
+    {
+      "id": "default-things-window",
+      "category": "things",
+      "imageFilename": "window.png",
+      "textEn": "Window",
+      "textVi": "Cửa sổ",
+      "isDefault": true
+    },
+    {
+      "id": "default-things-light",
+      "category": "things",
+      "imageFilename": "light.png",
+      "textEn": "Light",
+      "textVi": "Đèn",
+      "isDefault": true
+    },
+    {
+      "id": "default-wants-iwant",
+      "category": "wants",
+      "imageFilename": "i_want.png",
+      "textEn": "I want",
+      "textVi": "Tôi muốn",
+      "isDefault": true
+    },
+    {
+      "id": "default-wants-idontwant",
+      "category": "wants",
+      "imageFilename": "i_dont_want.png",
+      "textEn": "I don't want",
+      "textVi": "Tôi không muốn",
+      "isDefault": true
+    }
+  ]
+}
+

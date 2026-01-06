@@ -9,42 +9,190 @@ let sentencePresets = JSON.parse(localStorage.getItem('pecsSentencePresets') || 
 let editingCardId = null;
 let selectedCardForEdit = null;
 
-// Initialize default cards if they don't exist
+// Initialize default cards if they don't exist (deprecated - use loadDefaultCards instead)
+// This function removes old hardcoded cards - cards should be loaded from images folder
 function initializeDefaultCards() {
-    const defaultIWantId = 'default-iwant';
-    const defaultIDontWantId = 'default-idontwant';
+    // Remove old hardcoded cards if they exist (they will be replaced by loadDefaultCards)
+    const oldIWantIndex = cards.findIndex(c => c.id === 'default-iwant');
+    const oldIDontWantIndex = cards.findIndex(c => c.id === 'default-idontwant');
     
-    const hasIWant = cards.some(c => c.id === defaultIWantId);
-    const hasIDontWant = cards.some(c => c.id === defaultIDontWantId);
-    
-    if (!hasIWant) {
-        const iwantCard = {
-            id: defaultIWantId,
-            category: 'wants',
-            image: 'data:image/svg+xml,%3Csvg xmlns=\'http://www.w3.org/2000/svg\' viewBox=\'0 0 100 100\'%3E%3Crect fill=\'%234CAF50\' width=\'100\' height=\'100\'/%3E%3Ctext x=\'50\' y=\'60\' font-size=\'40\' fill=\'white\' text-anchor=\'middle\'%3EI WANT%3C/text%3E%3C/svg%3E',
-            textEn: 'I want',
-            textVi: 'Tôi muốn',
-            createdAt: new Date().toISOString(),
-            isDefault: true
-        };
-        cards.push(iwantCard);
+    if (oldIWantIndex >= 0) {
+        cards.splice(oldIWantIndex, 1);
+    }
+    if (oldIDontWantIndex >= 0) {
+        cards.splice(oldIDontWantIndex, 1);
     }
     
-    if (!hasIDontWant) {
-        const idontwantCard = {
-            id: defaultIDontWantId,
-            category: 'wants',
-            image: 'data:image/svg+xml,%3Csvg xmlns=\'http://www.w3.org/2000/svg\' viewBox=\'0 0 100 100\'%3E%3Crect fill=\'%23f44336\' width=\'100\' height=\'100\'/%3E%3Ctext x=\'50\' y=\'60\' font-size=\'30\' fill=\'white\' text-anchor=\'middle\'%3EI DON\'T%3C/text%3E%3Ctext x=\'50\' y=\'85\' font-size=\'30\' fill=\'white\' text-anchor=\'middle\'%3EWANT%3C/text%3E%3C/svg%3E',
-            textEn: "I don't want",
-            textVi: 'Tôi không muốn',
-            createdAt: new Date().toISOString(),
-            isDefault: true
-        };
-        cards.push(idontwantCard);
-    }
-    
-    if (!hasIWant || !hasIDontWant) {
+    // Save if we removed old cards
+    if (oldIWantIndex >= 0 || oldIDontWantIndex >= 0) {
         localStorage.setItem('pecsCards', JSON.stringify(cards));
+    }
+    
+    // Don't create new hardcoded cards - let loadDefaultCards handle it from images folder
+}
+
+// Load default cards from JSON file and images folder
+async function loadDefaultCards() {
+    try {
+        const response = await fetch('default-cards.json');
+        if (!response.ok) {
+            console.warn('default-cards.json not found, skipping default cards');
+            return;
+        }
+        
+        const defaultData = await response.json();
+        if (!defaultData.cards || !Array.isArray(defaultData.cards)) {
+            console.warn('Invalid default-cards.json format');
+            return;
+        }
+        
+        let loadedCount = 0;
+        let skippedCount = 0;
+        
+        for (const cardData of defaultData.cards) {
+            // Check if default card already exists (by ID or old ID format)
+            let existingIndex = cards.findIndex(c => c.id === cardData.id);
+            
+            // Also check for old ID formats for backward compatibility
+            if (existingIndex < 0 && cardData.id === 'default-wants-iwant') {
+                existingIndex = cards.findIndex(c => c.id === 'default-iwant');
+            }
+            if (existingIndex < 0 && cardData.id === 'default-wants-idontwant') {
+                existingIndex = cards.findIndex(c => c.id === 'default-idontwant');
+            }
+            
+            // If card exists, remove it first to replace with image version
+            if (existingIndex >= 0) {
+                cards.splice(existingIndex, 1);
+            }
+            
+            // Try to load image from images/ folder (relative to index.html)
+            try {
+                // Use relative path - works when images/ folder is in same directory as index.html
+                // Try multiple path variations to handle different scenarios
+                const pathVariations = [
+                    `./images/${cardData.imageFilename}`,  // Relative path with ./
+                    `images/${cardData.imageFilename}`,   // Simple relative path
+                    `${window.location.pathname.substring(0, window.location.pathname.lastIndexOf('/') + 1)}images/${cardData.imageFilename}` // Absolute from current path
+                ];
+                
+                let imageResponse = null;
+                let imagePath = '';
+                
+                // Try each path variation until one works
+                for (const path of pathVariations) {
+                    try {
+                        imagePath = path;
+                        console.log(`Attempting to load image from: ${imagePath}`);
+                        imageResponse = await fetch(imagePath);
+                        if (imageResponse.ok) {
+                            break; // Found working path
+                        }
+                    } catch (e) {
+                        continue; // Try next path
+                    }
+                }
+                
+                if (!imageResponse || !imageResponse.ok) {
+                    // Image not found with any path variation
+                    skippedCount++;
+                    console.log(`Default image not found: ${imagePath} (Status: ${imageResponse?.status || 'N/A'}) - will be loaded when image is added`);
+                } else {
+                    // Image found, load it
+                    const imageBlob = await imageResponse.blob();
+                    const reader = new FileReader();
+                    
+                    await new Promise((resolve, reject) => {
+                        reader.onload = (e) => {
+                            const card = {
+                                id: cardData.id,
+                                category: cardData.category,
+                                image: e.target.result,
+                                textEn: cardData.textEn,
+                                textVi: cardData.textVi,
+                                createdAt: new Date().toISOString(),
+                                isDefault: true
+                            };
+                            
+                            cards.push(card);
+                            loadedCount++;
+                            console.log(`Successfully loaded card: ${cardData.id} from ${imagePath}`);
+                            resolve();
+                        };
+                        reader.onerror = (error) => {
+                            console.error(`FileReader error for ${cardData.id}:`, error);
+                            reject(error);
+                        };
+                        reader.readAsDataURL(imageBlob);
+                    });
+                }
+            } catch (error) {
+                skippedCount++;
+                console.log(`Error loading default card image ${cardData.id}:`, error);
+            }
+        }
+        
+        if (loadedCount > 0) {
+            localStorage.setItem('pecsCards', JSON.stringify(cards));
+            console.log(`Loaded ${loadedCount} default cards from images folder`);
+            // Log the I want card specifically
+            const iWantCard = cards.find(c => c.id === 'default-wants-iwant' || c.id === 'default-iwant');
+            if (iWantCard) {
+                console.log('I want card is in cards array:', {
+                    id: iWantCard.id,
+                    hasImage: !!iWantCard.image,
+                    imageLength: iWantCard.image ? iWantCard.image.length : 0,
+                    textEn: iWantCard.textEn
+                });
+            } else {
+                console.log('I want card NOT found in cards array after loading');
+            }
+            if (skippedCount > 0) {
+                console.log(`${skippedCount} default cards skipped (images not found yet)`);
+            }
+            
+            // Update sentence bar if it's currently visible
+            if (document.getElementById('makeSentenceScreen').classList.contains('active')) {
+                initializeSentenceBar();
+            }
+            
+            // Refresh Edit Cards screen if it's currently visible
+            const editCardsScreen = document.getElementById('editCardsScreen');
+            if (editCardsScreen && editCardsScreen.classList.contains('active')) {
+                const categoryCardsView = document.getElementById('categoryCardsView');
+                const editCategorySelection = document.getElementById('editCategorySelection');
+                // If a category is currently being viewed, refresh it
+                if (categoryCardsView && !categoryCardsView.classList.contains('hidden')) {
+                    const categoryCardsTitle = document.getElementById('categoryCardsTitle');
+                    const currentCategory = categoryCardsTitle.textContent;
+                    // Find the category by matching the title
+                    const categoryMap = {
+                        'People': 'people',
+                        'Người': 'people',
+                        'Actions': 'actions',
+                        'Hành động': 'actions',
+                        'Food': 'food',
+                        'Thức ăn': 'food',
+                        'Place': 'place',
+                        'Nơi chốn': 'place',
+                        'Things': 'things',
+                        'Đồ vật': 'things',
+                        'Animals': 'animals',
+                        'Động vật': 'animals',
+                        'Wants': 'wants',
+                        'Muốn': 'wants'
+                    };
+                    const category = categoryMap[currentCategory];
+                    if (category) {
+                        showCategoryCards(category);
+                    }
+                }
+            }
+        } else if (skippedCount > 0) {
+            console.log(`No default cards loaded yet. Add images to images/ folder to load them.`);
+        }
+    } catch (error) {
+        console.warn('Error loading default cards:', error);
     }
 }
 
@@ -220,13 +368,27 @@ document.addEventListener('DOMContentLoaded', () => {
         document.getElementById('cardForm').classList.add('hidden');
     });
     
-    document.getElementById('makeSentenceBtn').addEventListener('click', () => {
+    document.getElementById('makeSentenceBtn').addEventListener('click', async () => {
+        // Reload cards from localStorage to ensure we have the latest data
+        cards = JSON.parse(localStorage.getItem('pecsCards') || '[]');
+        
+        // Ensure default cards are loaded (in case they weren't loaded on page load)
+        await loadDefaultCards();
+        
+        // Reload cards again after loadDefaultCards (it may have added new cards)
+        cards = JSON.parse(localStorage.getItem('pecsCards') || '[]');
+        
         showScreen('makeSentenceScreen');
-        initializeSentenceBar();
+        // Small delay to ensure DOM is ready
+        setTimeout(() => {
+            initializeSentenceBar();
+        }, 100);
     });
     
     // Edit Cards button
     document.getElementById('editCardsBtn').addEventListener('click', () => {
+        // Reload cards from localStorage to ensure we have the latest data
+        cards = JSON.parse(localStorage.getItem('pecsCards') || '[]');
         showScreen('editCardsScreen');
         document.getElementById('editCategorySelection').classList.remove('hidden');
         document.getElementById('categoryCardsView').classList.add('hidden');
@@ -315,26 +477,11 @@ document.addEventListener('DOMContentLoaded', () => {
     document.getElementById('closeLibrary').addEventListener('click', () => {
         document.getElementById('cardLibraryModal').classList.add('hidden');
         document.getElementById('selectCardBtn').classList.add('hidden');
-        document.getElementById('libraryBackBtn').classList.add('hidden');
-        document.getElementById('cardLibrary').className = 'card-library';
+        document.getElementById('backToCategoriesBtn').classList.add('hidden');
+        document.getElementById('cardLibraryCategories').classList.remove('hidden');
+        document.getElementById('cardLibrary').classList.add('hidden');
         currentSlotIndex = null;
         selectedCardForEdit = null;
-    });
-    
-    // Library back button
-    document.getElementById('libraryBackBtn').addEventListener('click', () => {
-        showCardLibraryCategories();
-    });
-    
-    // Select card button
-    document.getElementById('selectCardBtn').addEventListener('click', () => {
-        if (selectedCardForEdit) {
-            const card = cards.find(c => c.id === selectedCardForEdit);
-            if (card) {
-                selectCardForSlot(card);
-                document.getElementById('cardLibraryModal').classList.add('hidden');
-            }
-        }
     });
     
     document.getElementById('closeLoadModal').addEventListener('click', () => {
@@ -344,8 +491,6 @@ document.addEventListener('DOMContentLoaded', () => {
     document.getElementById('closeEditModal').addEventListener('click', () => {
         document.getElementById('editCardModal').classList.add('hidden');
         resetEditForm();
-    });
-    
     });
     
     // Close modals on background click
@@ -360,9 +505,6 @@ document.addEventListener('DOMContentLoaded', () => {
     document.getElementById('cardLibraryModal').addEventListener('click', (e) => {
         if (e.target.id === 'cardLibraryModal') {
             document.getElementById('cardLibraryModal').classList.add('hidden');
-            document.getElementById('selectCardBtn').classList.add('hidden');
-            document.getElementById('libraryBackBtn').classList.add('hidden');
-            document.getElementById('cardLibrary').className = 'card-library';
         }
     });
     
@@ -372,7 +514,18 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     });
     
-    updateLanguage();
+    // Load default cards from JSON file
+    loadDefaultCards().then(() => {
+        // After cards are loaded, update the sentence bar if we're on that screen
+        if (document.getElementById('makeSentenceScreen').classList.contains('active')) {
+            initializeSentenceBar();
+        }
+        // Also update language after cards are loaded
+        updateLanguage();
+    }).catch(() => {
+        // If loadDefaultCards fails, still update language
+        updateLanguage();
+    });
 });
 
 // Image upload handler
@@ -758,6 +911,14 @@ function openEditCard(cardId) {
     const card = cards.find(c => c.id === cardId);
     if (!card) return;
     
+    // Prevent editing default cards
+    if (card.isDefault) {
+        alert(currentLanguage === 'en' 
+            ? 'Default cards cannot be edited. You can create new cards to customize.' 
+            : 'Thẻ mặc định không thể chỉnh sửa. Bạn có thể tạo thẻ mới để tùy chỉnh.');
+        return;
+    }
+    
     editingCardId = cardId;
     const modal = document.getElementById('editCardModal');
     
@@ -830,7 +991,7 @@ function updateCard() {
     }
     
     // Update sentence bar if "I want" card was edited
-    if (updatedCard && updatedCard.id === 'default-iwant') {
+    if (updatedCard && (updatedCard.id === 'default-wants-iwant' || updatedCard.id === 'default-iwant')) {
         const fixedSlot = document.querySelector('.fixed-slot');
         if (fixedSlot) {
             fixedSlot.innerHTML = `
@@ -904,11 +1065,20 @@ function showCategoryCards(category) {
             `;
             
             const editBtn = cardItem.querySelector('.category-card-edit-btn');
-            editBtn.addEventListener('click', () => {
-                openEditCard(card.id);
-                categoryCardsView.classList.add('hidden');
-                editCategorySelection.classList.remove('hidden');
-            });
+            
+            // Disable edit button for default cards
+            if (card.isDefault) {
+                editBtn.disabled = true;
+                editBtn.style.opacity = '0.5';
+                editBtn.style.cursor = 'not-allowed';
+                editBtn.title = currentLanguage === 'en' ? 'Default cards cannot be edited' : 'Thẻ mặc định không thể chỉnh sửa';
+            } else {
+                editBtn.addEventListener('click', () => {
+                    openEditCard(card.id);
+                    categoryCardsView.classList.add('hidden');
+                    editCategorySelection.classList.remove('hidden');
+                });
+            }
             
             categoryCardsGrid.appendChild(cardItem);
         });
@@ -929,12 +1099,33 @@ function initializeSentenceBar() {
     // Update "I want" card to use default if available
     const iwantSlot = sentenceBar.querySelector('.fixed-slot');
     if (iwantSlot) {
-        const defaultIWant = cards.find(c => c.id === 'default-iwant');
+        // Remove old event listeners
+        const newSlot = iwantSlot.cloneNode(true);
+        iwantSlot.parentNode.replaceChild(newSlot, iwantSlot);
+        const updatedSlot = sentenceBar.querySelector('.fixed-slot');
+        
+        // Check for new ID format first, then fallback to old format
+        const defaultIWant = cards.find(c => c.id === 'default-wants-iwant' || c.id === 'default-iwant');
+        console.log('Looking for I want card. Cards array length:', cards.length);
+        console.log('Found I want card:', defaultIWant);
         if (defaultIWant) {
-            iwantSlot.innerHTML = `
+            console.log('Using I want card with image:', defaultIWant.image ? 'Image found' : 'No image');
+            updatedSlot.dataset.cardId = defaultIWant.id;
+            updatedSlot.innerHTML = `
                 <img src="${defaultIWant.image}" alt="${defaultIWant.textEn}">
                 <span class="slot-text">${currentLanguage === 'en' ? defaultIWant.textEn.toUpperCase() : defaultIWant.textVi.toUpperCase()}</span>
             `;
+            // Make it clickable to change the card
+            updatedSlot.addEventListener('click', () => openCardLibrary(updatedSlot));
+        } else {
+            console.log('I want card not found, using fallback');
+            // Fallback to hardcoded if no card found
+            updatedSlot.dataset.cardId = '';
+            updatedSlot.innerHTML = `
+                <img src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Crect fill='%234CAF50' width='100' height='100'/%3E%3Ctext x='50' y='60' font-size='40' fill='white' text-anchor='middle'%3EI WANT%3C/text%3E%3C/svg%3E" alt="I want">
+                <span class="slot-text">${currentLanguage === 'en' ? 'I WANT' : 'TÔI MUỐN'}</span>
+            `;
+            updatedSlot.addEventListener('click', () => openCardLibrary(updatedSlot));
         }
     }
     
@@ -967,73 +1158,95 @@ function addSentenceSlot(position) {
 function openCardLibrary(slotElement) {
     currentSlotIndex = slotElement;
     selectedCardForEdit = null;
-    showCardLibraryCategories();
-}
-
-// Show card library categories
-function showCardLibraryCategories() {
     const modal = document.getElementById('cardLibraryModal');
+    const categoriesView = document.getElementById('cardLibraryCategories');
     const library = document.getElementById('cardLibrary');
     const selectBtn = document.getElementById('selectCardBtn');
-    const backBtn = document.getElementById('libraryBackBtn');
+    const backBtn = document.getElementById('backToCategoriesBtn');
+    const title = document.getElementById('cardLibraryTitle');
     
-    library.innerHTML = '';
-    library.className = 'card-library category-grid-container';
+    // Show categories, hide cards
+    categoriesView.classList.remove('hidden');
+    library.classList.add('hidden');
     selectBtn.classList.add('hidden');
     backBtn.classList.add('hidden');
     
-    const allCategories = [
-        { id: 'people', en: 'People', vi: 'Người' },
-        { id: 'actions', en: 'Actions', vi: 'Hành động' },
-        { id: 'food', en: 'Food', vi: 'Thức ăn' },
-        { id: 'place', en: 'Place', vi: 'Nơi chốn' },
-        { id: 'things', en: 'Things', vi: 'Đồ vật' },
-        { id: 'animals', en: 'Animals', vi: 'Động vật' },
-        { id: 'wants', en: 'Wants', vi: 'Muốn' }
-    ];
+    // Update title
+    title.textContent = currentLanguage === 'en' ? 'Select Category' : 'Chọn danh mục';
     
-    // Only show categories that have cards
-    const categoriesWithCards = allCategories.filter(category => 
-        cards.some(card => card.category === category.id)
-    );
+    // Clear and populate categories
+    categoriesView.innerHTML = '';
     
-    categoriesWithCards.forEach(category => {
-        const categoryTile = document.createElement('div');
-        categoryTile.className = 'category-tile';
-        categoryTile.dataset.category = category.id;
-        categoryTile.innerHTML = `<span data-en="${category.en}" data-vi="${category.vi}">${currentLanguage === 'en' ? category.en : category.vi}</span>`;
-        
-        categoryTile.addEventListener('click', () => {
-            showCardLibraryCategoryCards(category.id);
+    const categoryNames = {
+        'people': { en: 'People', vi: 'Người' },
+        'actions': { en: 'Actions', vi: 'Hành động' },
+        'food': { en: 'Food', vi: 'Thức ăn' },
+        'place': { en: 'Place', vi: 'Nơi chốn' },
+        'things': { en: 'Things', vi: 'Đồ vật' },
+        'animals': { en: 'Animals', vi: 'Động vật' },
+        'wants': { en: 'Wants', vi: 'Muốn' }
+    };
+    
+    // Get unique categories that have cards
+    const categoriesWithCards = [...new Set(cards.map(c => c.category))];
+    
+    if (categoriesWithCards.length === 0) {
+        categoriesView.innerHTML = `<p style="text-align: center; padding: 40px; color: var(--text-secondary); grid-column: 1 / -1;">
+            ${currentLanguage === 'en' ? 'No cards available. Create cards first!' : 'Chưa có thẻ. Hãy tạo thẻ trước!'}
+        </p>`;
+    } else {
+        categoriesWithCards.forEach(category => {
+            const categoryTile = document.createElement('div');
+            categoryTile.className = 'card-library-category-tile';
+            categoryTile.dataset.category = category;
+            categoryTile.innerHTML = `
+                <span>${categoryNames[category] ? (currentLanguage === 'en' ? categoryNames[category].en : categoryNames[category].vi) : category}</span>
+            `;
+            
+            categoryTile.addEventListener('click', () => {
+                showCardsInCategory(category, modal, library, categoriesView, selectBtn, backBtn, title);
+            });
+            
+            categoriesView.appendChild(categoryTile);
         });
-        
-        library.appendChild(categoryTile);
-    });
+    }
     
     modal.classList.remove('hidden');
 }
 
-// Show cards in a specific category
-function showCardLibraryCategoryCards(category) {
-    const modal = document.getElementById('cardLibraryModal');
-    const library = document.getElementById('cardLibrary');
-    const selectBtn = document.getElementById('selectCardBtn');
-    const backBtn = document.getElementById('libraryBackBtn');
-    
-    library.innerHTML = '';
-    library.className = 'card-library';
-    selectBtn.classList.add('hidden');
-    backBtn.classList.remove('hidden');
-    
+// Show cards in selected category
+function showCardsInCategory(category, modal, library, categoriesView, selectBtn, backBtn, title) {
     const categoryCards = cards.filter(card => card.category === category);
     
+    // Hide categories, show cards
+    categoriesView.classList.add('hidden');
+    library.classList.remove('hidden');
+    backBtn.classList.remove('hidden');
+    
+    // Update title
+    const categoryNames = {
+        'people': { en: 'People', vi: 'Người' },
+        'actions': { en: 'Actions', vi: 'Hành động' },
+        'food': { en: 'Food', vi: 'Thức ăn' },
+        'place': { en: 'Place', vi: 'Nơi chốn' },
+        'things': { en: 'Things', vi: 'Đồ vật' },
+        'animals': { en: 'Animals', vi: 'Động vật' },
+        'wants': { en: 'Wants', vi: 'Muốn' }
+    };
+    const categoryName = categoryNames[category] 
+        ? (currentLanguage === 'en' ? categoryNames[category].en : categoryNames[category].vi)
+        : category;
+    title.textContent = categoryName;
+    
+    // Clear and populate cards
+    library.innerHTML = '';
+    let selectedCardItem = null;
+    
     if (categoryCards.length === 0) {
-        library.innerHTML = `<p style="text-align: center; padding: 40px; color: var(--text-secondary);">
+        library.innerHTML = `<p style="text-align: center; padding: 40px; color: var(--text-secondary); grid-column: 1 / -1;">
             ${currentLanguage === 'en' ? 'No cards in this category.' : 'Chưa có thẻ trong danh mục này.'}
         </p>`;
     } else {
-        let selectedCardItem = null;
-        
         categoryCards.forEach(card => {
             const cardItem = document.createElement('div');
             cardItem.className = 'card-item';
@@ -1064,21 +1277,46 @@ function showCardLibraryCategoryCards(category) {
                 }
             });
             
-            // Double click to use in slot
+            // Double click to use in slot directly
             cardItem.addEventListener('dblclick', () => {
-                selectCardForSlot(card);
-                modal.classList.add('hidden');
+                const selectedCard = cards.find(c => c.id === card.id);
+                if (selectedCard) {
+                    selectCardForSlot(selectedCard);
+                    modal.classList.add('hidden');
+                }
             });
             
             library.appendChild(cardItem);
         });
     }
+    
+    // Back to categories button
+    backBtn.onclick = () => {
+        library.classList.add('hidden');
+        categoriesView.classList.remove('hidden');
+        backBtn.classList.add('hidden');
+        selectBtn.classList.add('hidden');
+        title.textContent = currentLanguage === 'en' ? 'Select Category' : 'Chọn danh mục';
+    };
+    
+    // Select button
+    selectBtn.onclick = () => {
+        if (selectedCardForEdit) {
+            const selectedCard = cards.find(c => c.id === selectedCardForEdit);
+            if (selectedCard) {
+                selectCardForSlot(selectedCard);
+                modal.classList.add('hidden');
+            }
+        }
+    };
 }
 
 // Select card for slot
 function selectCardForSlot(card) {
     if (!currentSlotIndex) return;
     
+    // Remove fixed-slot class if it was the "I want" slot
+    currentSlotIndex.classList.remove('fixed-slot');
     currentSlotIndex.className = 'sentence-slot';
     currentSlotIndex.dataset.cardId = card.id;
     currentSlotIndex.innerHTML = `
@@ -1097,23 +1335,39 @@ function updateSentenceSlotsText() {
     // Update "I want" fixed slot
     const fixedSlot = document.querySelector('.fixed-slot');
     if (fixedSlot) {
-        const defaultIWant = cards.find(c => c.id === 'default-iwant');
-        if (defaultIWant) {
-            const textSpan = fixedSlot.querySelector('.slot-text');
-            const img = fixedSlot.querySelector('img');
-            if (textSpan) {
-                textSpan.textContent = currentLanguage === 'en' 
-                    ? defaultIWant.textEn.toUpperCase() 
-                    : defaultIWant.textVi.toUpperCase();
-            }
-            if (img) {
-                img.src = defaultIWant.image;
-                img.alt = defaultIWant.textEn;
+        const cardId = fixedSlot.dataset.cardId;
+        if (cardId) {
+            // If it has a card ID, use that card
+            const card = cards.find(c => c.id === cardId);
+            if (card) {
+                const textSpan = fixedSlot.querySelector('.slot-text');
+                const img = fixedSlot.querySelector('img');
+                if (textSpan) {
+                    textSpan.textContent = currentLanguage === 'en' 
+                        ? card.textEn.toUpperCase() 
+                        : card.textVi.toUpperCase();
+                }
+                if (img) {
+                    img.src = card.image;
+                    img.alt = card.textEn;
+                }
             }
         } else {
-            const textSpan = fixedSlot.querySelector('.slot-text');
-            if (textSpan) {
-                textSpan.textContent = currentLanguage === 'en' ? 'I WANT' : 'TÔI MUỐN';
+            // No card selected, try to use default "I want"
+            const defaultIWant = cards.find(c => c.id === 'default-wants-iwant' || c.id === 'default-iwant');
+            if (defaultIWant) {
+                fixedSlot.dataset.cardId = defaultIWant.id;
+                fixedSlot.innerHTML = `
+                    <img src="${defaultIWant.image}" alt="${defaultIWant.textEn}">
+                    <span class="slot-text">${currentLanguage === 'en' ? defaultIWant.textEn.toUpperCase() : defaultIWant.textVi.toUpperCase()}</span>
+                `;
+                // Re-attach click handler
+                fixedSlot.addEventListener('click', () => openCardLibrary(fixedSlot));
+            } else {
+                const textSpan = fixedSlot.querySelector('.slot-text');
+                if (textSpan) {
+                    textSpan.textContent = currentLanguage === 'en' ? 'I WANT' : 'TÔI MUỐN';
+                }
             }
         }
     }
@@ -1327,3 +1581,4 @@ window.addEventListener('resize', () => {
         resizeSentenceBar();
     }
 });
+

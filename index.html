@@ -191,7 +191,7 @@
                 <button class="add-slot-btn" id="addSlotBefore">
                     <span>+</span>
                 </button>
-                <div class="sentence-slot fixed-slot" data-card-id="iwant">
+                <div class="sentence-slot fixed-slot" data-card-id="">
                     <img src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Crect fill='%234CAF50' width='100' height='100'/%3E%3Ctext x='50' y='60' font-size='40' fill='white' text-anchor='middle'%3EI WANT%3C/text%3E%3C/svg%3E" alt="I want">
                     <span class="slot-text">I WANT</span>
                 </div>
@@ -215,16 +215,17 @@
     <div id="cardLibraryModal" class="modal hidden">
         <div class="modal-content">
             <div class="modal-header">
-                <button class="back-btn hidden" id="libraryBackBtn">
-                    <span data-en="← Back" data-vi="← Quay lại">← Back</span>
-                </button>
-                <h2 data-en="Select Card" data-vi="Chọn thẻ">Select Card</h2>
+                <h2 id="cardLibraryTitle" data-en="Select Category" data-vi="Chọn danh mục">Select Category</h2>
                 <button class="close-btn" id="closeLibrary">&times;</button>
             </div>
-            <div id="cardLibrary" class="card-library"></div>
+            <div id="cardLibraryCategories" class="card-library-categories"></div>
+            <div id="cardLibrary" class="card-library hidden"></div>
             <div class="modal-footer">
                 <button id="selectCardBtn" class="control-btn hidden">
-                    <span data-en="Select Card" data-vi="Chọn thẻ">Select Card</span>
+                    <span data-en="Select" data-vi="Chọn">Select</span>
+                </button>
+                <button id="backToCategoriesBtn" class="control-btn hidden">
+                    <span data-en="← Back to Categories" data-vi="← Về danh mục">← Back to Categories</span>
                 </button>
             </div>
         </div>
@@ -304,3 +305,4 @@
     <script src="app.js"></script>
 </body>
 </html>
+
