@@ -314,9 +314,27 @@ document.addEventListener('DOMContentLoaded', () => {
     // Modal close buttons
     document.getElementById('closeLibrary').addEventListener('click', () => {
         document.getElementById('cardLibraryModal').classList.add('hidden');
-        document.getElementById('editCardBtn').classList.add('hidden');
+        document.getElementById('selectCardBtn').classList.add('hidden');
+        document.getElementById('libraryBackBtn').classList.add('hidden');
+        document.getElementById('cardLibrary').className = 'card-library';
         currentSlotIndex = null;
         selectedCardForEdit = null;
+    });
+    
+    // Library back button
+    document.getElementById('libraryBackBtn').addEventListener('click', () => {
+        showCardLibraryCategories();
+    });
+    
+    // Select card button
+    document.getElementById('selectCardBtn').addEventListener('click', () => {
+        if (selectedCardForEdit) {
+            const card = cards.find(c => c.id === selectedCardForEdit);
+            if (card) {
+                selectCardForSlot(card);
+                document.getElementById('cardLibraryModal').classList.add('hidden');
+            }
+        }
     });
     
     document.getElementById('closeLoadModal').addEventListener('click', () => {
@@ -328,15 +346,6 @@ document.addEventListener('DOMContentLoaded', () => {
         resetEditForm();
     });
     
-    // Edit card button
-    document.getElementById('editCardBtn').addEventListener('click', () => {
-        if (selectedCardForEdit) {
-            openEditCard(selectedCardForEdit);
-            document.getElementById('cardLibraryModal').classList.add('hidden');
-        } else if (currentSlotIndex && currentSlotIndex.dataset.cardId) {
-            openEditCard(currentSlotIndex.dataset.cardId);
-            document.getElementById('cardLibraryModal').classList.add('hidden');
-        }
     });
     
     // Close modals on background click
@@ -351,6 +360,9 @@ document.addEventListener('DOMContentLoaded', () => {
     document.getElementById('cardLibraryModal').addEventListener('click', (e) => {
         if (e.target.id === 'cardLibraryModal') {
             document.getElementById('cardLibraryModal').classList.add('hidden');
+            document.getElementById('selectCardBtn').classList.add('hidden');
+            document.getElementById('libraryBackBtn').classList.add('hidden');
+            document.getElementById('cardLibrary').className = 'card-library';
         }
     });
     
@@ -955,21 +967,74 @@ function addSentenceSlot(position) {
 function openCardLibrary(slotElement) {
     currentSlotIndex = slotElement;
     selectedCardForEdit = null;
+    showCardLibraryCategories();
+}
+
+// Show card library categories
+function showCardLibraryCategories() {
     const modal = document.getElementById('cardLibraryModal');
     const library = document.getElementById('cardLibrary');
-    const editBtn = document.getElementById('editCardBtn');
+    const selectBtn = document.getElementById('selectCardBtn');
+    const backBtn = document.getElementById('libraryBackBtn');
     
     library.innerHTML = '';
-    editBtn.classList.add('hidden');
+    library.className = 'card-library category-grid-container';
+    selectBtn.classList.add('hidden');
+    backBtn.classList.add('hidden');
     
-    if (cards.length === 0) {
+    const allCategories = [
+        { id: 'people', en: 'People', vi: 'Người' },
+        { id: 'actions', en: 'Actions', vi: 'Hành động' },
+        { id: 'food', en: 'Food', vi: 'Thức ăn' },
+        { id: 'place', en: 'Place', vi: 'Nơi chốn' },
+        { id: 'things', en: 'Things', vi: 'Đồ vật' },
+        { id: 'animals', en: 'Animals', vi: 'Động vật' },
+        { id: 'wants', en: 'Wants', vi: 'Muốn' }
+    ];
+    
+    // Only show categories that have cards
+    const categoriesWithCards = allCategories.filter(category => 
+        cards.some(card => card.category === category.id)
+    );
+    
+    categoriesWithCards.forEach(category => {
+        const categoryTile = document.createElement('div');
+        categoryTile.className = 'category-tile';
+        categoryTile.dataset.category = category.id;
+        categoryTile.innerHTML = `<span data-en="${category.en}" data-vi="${category.vi}">${currentLanguage === 'en' ? category.en : category.vi}</span>`;
+        
+        categoryTile.addEventListener('click', () => {
+            showCardLibraryCategoryCards(category.id);
+        });
+        
+        library.appendChild(categoryTile);
+    });
+    
+    modal.classList.remove('hidden');
+}
+
+// Show cards in a specific category
+function showCardLibraryCategoryCards(category) {
+    const modal = document.getElementById('cardLibraryModal');
+    const library = document.getElementById('cardLibrary');
+    const selectBtn = document.getElementById('selectCardBtn');
+    const backBtn = document.getElementById('libraryBackBtn');
+    
+    library.innerHTML = '';
+    library.className = 'card-library';
+    selectBtn.classList.add('hidden');
+    backBtn.classList.remove('hidden');
+    
+    const categoryCards = cards.filter(card => card.category === category);
+    
+    if (categoryCards.length === 0) {
         library.innerHTML = `<p style="text-align: center; padding: 40px; color: var(--text-secondary);">
-            ${currentLanguage === 'en' ? 'No cards available. Create cards first!' : 'Chưa có thẻ. Hãy tạo thẻ trước!'}
+            ${currentLanguage === 'en' ? 'No cards in this category.' : 'Chưa có thẻ trong danh mục này.'}
         </p>`;
     } else {
         let selectedCardItem = null;
         
-        cards.forEach(card => {
+        categoryCards.forEach(card => {
             const cardItem = document.createElement('div');
             cardItem.className = 'card-item';
             cardItem.dataset.cardId = card.id;
@@ -989,13 +1054,13 @@ function openCardLibrary(slotElement) {
                 if (selectedCardItem === cardItem) {
                     selectedCardItem = null;
                     selectedCardForEdit = null;
-                    editBtn.classList.add('hidden');
+                    selectBtn.classList.add('hidden');
                 } else {
                     // Select this card
                     cardItem.classList.add('selected');
                     selectedCardItem = cardItem;
                     selectedCardForEdit = card.id;
-                    editBtn.classList.remove('hidden');
+                    selectBtn.classList.remove('hidden');
                 }
             });
             
@@ -1008,8 +1073,6 @@ function openCardLibrary(slotElement) {
             library.appendChild(cardItem);
         });
     }
-    
-    modal.classList.remove('hidden');
 }
 
 // Select card for slot

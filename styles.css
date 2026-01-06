@@ -155,6 +155,15 @@ body {
     margin: 0 auto;
 }
 
+.category-grid-container {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+    gap: 20px;
+    max-width: 800px;
+    margin: 0 auto;
+    padding: 20px;
+}
+
 .category-tile {
     min-height: var(--min-touch-target);
     background: var(--card-bg);
