@@ -331,7 +331,7 @@ const simpleTranslate = (text) => {
         'Door': 'Cửa',
         'Window': 'Cửa sổ',
         'Light': 'Đèn',
-        'I want': 'Tôi muốn',
+        'I want': 'CON MUỐN',
         "I don't want": 'Tôi không muốn'
     };
     
@@ -1592,4 +1592,5 @@ window.addEventListener('resize', () => {
         resizeSentenceBar();
     }
 });
+
 
