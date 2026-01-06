@@ -406,7 +406,7 @@ function initializeCrop(imageSrc, mode = 'create') {
             const initialScale = Math.max(scaleX, scaleY) * 1.1; // Slightly larger to allow cropping
             
             // Reset crop state
-            state.scale = Math.max(0.5, Math.min(2, initialScale));
+            state.scale = Math.max(0, Math.min(1, initialScale));
             state.x = 0;
             state.y = 0;
             
@@ -509,8 +509,8 @@ function adjustZoom(factor, mode = 'create') {
     const viewportRect = viewport.getBoundingClientRect();
     const viewportSize = viewportRect.width;
     
-    // Calculate new scale
-    const newScale = Math.max(0.5, Math.min(3, state.scale * factor));
+    // Calculate new scale (0 to 100% = 0 to 1.0)
+    const newScale = Math.max(0, Math.min(1, state.scale * factor));
     state.scale = newScale;
     
     updateCropImageTransform(state);
