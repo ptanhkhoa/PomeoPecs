@@ -102,7 +102,7 @@
       "category": "wants",
       "imageFilename": "i_want.png",
       "textEn": "I want",
-      "textVi": "Tôi muốn",
+      "textVi": "Con muốn",
       "isDefault": true
     },
     {
@@ -115,4 +115,5 @@
     }
   ]
 }
+
 
