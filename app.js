@@ -9,6 +9,35 @@ let sentencePresets = JSON.parse(localStorage.getItem('pecsSentencePresets') || 
 let editingCardId = null;
 let selectedCardForEdit = null;
 
+// Helper function to get image source for a card
+// For default cards, returns path to images folder
+// For user-created cards, returns Base64 from localStorage
+function getCardImageSrc(card) {
+    if (card.isDefault && card.imageFilename) {
+        // Default card - load from images folder
+        const pathVariations = [
+            `./images/${card.imageFilename}`,
+            `images/${card.imageFilename}`,
+            `${window.location.pathname.substring(0, window.location.pathname.lastIndexOf('/') + 1)}images/${card.imageFilename}`
+        ];
+        // Return the first path variation (browser will try to load it)
+        return pathVariations[0];
+    } else {
+        // User-created card - use Base64 from localStorage
+        return card.image || '';
+    }
+}
+
+// Special function to get "I want" card image - always loads from folder
+function getIWantImageSrc() {
+    const pathVariations = [
+        `./images/i_want.png`,
+        `images/i_want.png`,
+        `${window.location.pathname.substring(0, window.location.pathname.lastIndexOf('/') + 1)}images/i_want.png`
+    ];
+    return pathVariations[0];
+}
+
 // Initialize default cards if they don't exist (deprecated - use loadDefaultCards instead)
 // This function removes old hardcoded cards - cards should be loaded from images folder
 function initializeDefaultCards() {
@@ -98,33 +127,22 @@ async function loadDefaultCards() {
                     skippedCount++;
                     console.log(`Default image not found: ${imagePath} (Status: ${imageResponse?.status || 'N/A'}) - will be loaded when image is added`);
                 } else {
-                    // Image found, load it
-                    const imageBlob = await imageResponse.blob();
-                    const reader = new FileReader();
+                    // Image found - for default cards, store only filename (not Base64)
+                    // Images will be loaded from folder when displayed
+                    const card = {
+                        id: cardData.id,
+                        category: cardData.category,
+                        imageFilename: cardData.imageFilename, // Store filename instead of Base64
+                        image: null, // Will be loaded dynamically from folder
+                        textEn: cardData.textEn,
+                        textVi: cardData.textVi,
+                        createdAt: new Date().toISOString(),
+                        isDefault: true
+                    };
                     
-                    await new Promise((resolve, reject) => {
-                        reader.onload = (e) => {
-                            const card = {
-                                id: cardData.id,
-                                category: cardData.category,
-                                image: e.target.result,
-                                textEn: cardData.textEn,
-                                textVi: cardData.textVi,
-                                createdAt: new Date().toISOString(),
-                                isDefault: true
-                            };
-                            
-                            cards.push(card);
-                            loadedCount++;
-                            console.log(`Successfully loaded card: ${cardData.id} from ${imagePath}`);
-                            resolve();
-                        };
-                        reader.onerror = (error) => {
-                            console.error(`FileReader error for ${cardData.id}:`, error);
-                            reject(error);
-                        };
-                        reader.readAsDataURL(imageBlob);
-                    });
+                    cards.push(card);
+                    loadedCount++;
+                    console.log(`Successfully loaded card metadata: ${cardData.id} (image will load from folder: ${imagePath})`);
                 }
             } catch (error) {
                 skippedCount++;
@@ -925,11 +943,11 @@ function openEditCard(cardId) {
     // Populate form with card data
     document.getElementById('editCardText').value = card.textEn;
     document.getElementById('editTranslatedText').textContent = card.textVi;
-    document.getElementById('editImagePreview').innerHTML = `<img src="${card.image}" alt="${card.textEn}">`;
+    document.getElementById('editImagePreview').innerHTML = `<img src="${getCardImageSrc(card)}" alt="${card.textEn}">`;
     document.getElementById('editImagePreview').classList.remove('hidden');
     
-    // Set cropped image data for update
-    croppedImageData = card.image;
+    // Set cropped image data for update (only for user-created cards, default cards can't be edited)
+    croppedImageData = card.isDefault ? null : card.image;
     
     // Reset edit form state
     document.getElementById('editAutoTranslateCheck').checked = true;
@@ -995,7 +1013,7 @@ function updateCard() {
         const fixedSlot = document.querySelector('.fixed-slot');
         if (fixedSlot) {
             fixedSlot.innerHTML = `
-                <img src="${updatedCard.image}" alt="${updatedCard.textEn}">
+                <img src="${getCardImageSrc(updatedCard)}" alt="${updatedCard.textEn}">
                 <span class="slot-text">${currentLanguage === 'en' ? updatedCard.textEn.toUpperCase() : updatedCard.textVi.toUpperCase()}</span>
             `;
             resizeSentenceBar();
@@ -1057,7 +1075,7 @@ function showCategoryCards(category) {
             const cardItem = document.createElement('div');
             cardItem.className = 'category-card-item';
             cardItem.innerHTML = `
-                <img src="${card.image}" alt="${card.textEn}">
+                <img src="${getCardImageSrc(card)}" alt="${card.textEn}">
                 <div class="category-card-item-text">${currentLanguage === 'en' ? card.textEn : card.textVi}</div>
                 <button class="category-card-edit-btn">
                     <span data-en="Edit" data-vi="Sửa">Edit</span>
@@ -1108,25 +1126,19 @@ function initializeSentenceBar() {
         const defaultIWant = cards.find(c => c.id === 'default-wants-iwant' || c.id === 'default-iwant');
         console.log('Looking for I want card. Cards array length:', cards.length);
         console.log('Found I want card:', defaultIWant);
-        if (defaultIWant) {
-            console.log('Using I want card with image:', defaultIWant.image ? 'Image found' : 'No image');
-            updatedSlot.dataset.cardId = defaultIWant.id;
-            updatedSlot.innerHTML = `
-                <img src="${defaultIWant.image}" alt="${defaultIWant.textEn}">
-                <span class="slot-text">${currentLanguage === 'en' ? defaultIWant.textEn.toUpperCase() : defaultIWant.textVi.toUpperCase()}</span>
-            `;
-            // Make it clickable to change the card
-            updatedSlot.addEventListener('click', () => openCardLibrary(updatedSlot));
-        } else {
-            console.log('I want card not found, using fallback');
-            // Fallback to hardcoded if no card found
-            updatedSlot.dataset.cardId = '';
-            updatedSlot.innerHTML = `
-                <img src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Crect fill='%234CAF50' width='100' height='100'/%3E%3Ctext x='50' y='60' font-size='40' fill='white' text-anchor='middle'%3EI WANT%3C/text%3E%3C/svg%3E" alt="I want">
-                <span class="slot-text">${currentLanguage === 'en' ? 'I WANT' : 'TÔI MUỐN'}</span>
-            `;
-            updatedSlot.addEventListener('click', () => openCardLibrary(updatedSlot));
-        }
+        
+        // Always use the image from folder for "I want" card
+        const iWantTextEn = defaultIWant ? defaultIWant.textEn : 'I want';
+        const iWantTextVi = defaultIWant ? defaultIWant.textVi : 'Tôi muốn';
+        const iWantCardId = defaultIWant ? defaultIWant.id : 'default-wants-iwant';
+        
+        updatedSlot.dataset.cardId = iWantCardId;
+        updatedSlot.innerHTML = `
+            <img src="${getIWantImageSrc()}" alt="${iWantTextEn}" onerror="this.onerror=null; this.src='./images/i_want.png';">
+            <span class="slot-text">${currentLanguage === 'en' ? iWantTextEn.toUpperCase() : iWantTextVi.toUpperCase()}</span>
+        `;
+        // Make it clickable to change the card
+        updatedSlot.addEventListener('click', () => openCardLibrary(updatedSlot));
     }
     
     resizeSentenceBar();
@@ -1252,7 +1264,7 @@ function showCardsInCategory(category, modal, library, categoriesView, selectBtn
             cardItem.className = 'card-item';
             cardItem.dataset.cardId = card.id;
             cardItem.innerHTML = `
-                <img src="${card.image}" alt="${card.textEn}">
+                <img src="${getCardImageSrc(card)}" alt="${card.textEn}">
                 <div class="card-item-text">${currentLanguage === 'en' ? card.textEn : card.textVi}</div>
             `;
             
@@ -1320,7 +1332,7 @@ function selectCardForSlot(card) {
     currentSlotIndex.className = 'sentence-slot';
     currentSlotIndex.dataset.cardId = card.id;
     currentSlotIndex.innerHTML = `
-        <img src="${card.image}" alt="${card.textEn}">
+        <img src="${getCardImageSrc(card)}" alt="${card.textEn}">
         <span class="slot-text">${currentLanguage === 'en' ? card.textEn.toUpperCase() : card.textVi.toUpperCase()}</span>
     `;
     
@@ -1348,27 +1360,24 @@ function updateSentenceSlotsText() {
                         : card.textVi.toUpperCase();
                 }
                 if (img) {
-                    img.src = card.image;
+                    img.src = getCardImageSrc(card);
                     img.alt = card.textEn;
                 }
             }
         } else {
-            // No card selected, try to use default "I want"
+            // No card selected, always use "I want" from folder
             const defaultIWant = cards.find(c => c.id === 'default-wants-iwant' || c.id === 'default-iwant');
-            if (defaultIWant) {
-                fixedSlot.dataset.cardId = defaultIWant.id;
-                fixedSlot.innerHTML = `
-                    <img src="${defaultIWant.image}" alt="${defaultIWant.textEn}">
-                    <span class="slot-text">${currentLanguage === 'en' ? defaultIWant.textEn.toUpperCase() : defaultIWant.textVi.toUpperCase()}</span>
-                `;
-                // Re-attach click handler
-                fixedSlot.addEventListener('click', () => openCardLibrary(fixedSlot));
-            } else {
-                const textSpan = fixedSlot.querySelector('.slot-text');
-                if (textSpan) {
-                    textSpan.textContent = currentLanguage === 'en' ? 'I WANT' : 'TÔI MUỐN';
-                }
-            }
+            const iWantTextEn = defaultIWant ? defaultIWant.textEn : 'I want';
+            const iWantTextVi = defaultIWant ? defaultIWant.textVi : 'Tôi muốn';
+            const iWantCardId = defaultIWant ? defaultIWant.id : 'default-wants-iwant';
+            
+            fixedSlot.dataset.cardId = iWantCardId;
+            fixedSlot.innerHTML = `
+                <img src="${getIWantImageSrc()}" alt="${iWantTextEn}" onerror="this.onerror=null; this.src='./images/i_want.png';">
+                <span class="slot-text">${currentLanguage === 'en' ? iWantTextEn.toUpperCase() : iWantTextVi.toUpperCase()}</span>
+            `;
+            // Re-attach click handler
+            fixedSlot.addEventListener('click', () => openCardLibrary(fixedSlot));
         }
     }
     
@@ -1504,12 +1513,14 @@ function showLoadSentenceModal() {
             const preview = document.createElement('div');
             preview.className = 'preset-preview';
             
-            // Add "I want" card
+            // Add "I want" card - always load from folder
             const iwantPreview = document.createElement('div');
             iwantPreview.className = 'sentence-slot fixed-slot';
+            const defaultIWant = cards.find(c => c.id === 'default-wants-iwant' || c.id === 'default-iwant');
+            const iWantText = defaultIWant ? (currentLanguage === 'en' ? defaultIWant.textEn.toUpperCase() : defaultIWant.textVi.toUpperCase()) : 'I WANT';
             iwantPreview.innerHTML = `
-                <img src="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Crect fill='%234CAF50' width='100' height='100'/%3E%3Ctext x='50' y='60' font-size='40' fill='white' text-anchor='middle'%3EI WANT%3C/text%3E%3C/svg%3E" alt="I want">
-                <span class="slot-text">I WANT</span>
+                <img src="${getIWantImageSrc()}" alt="I want" onerror="this.onerror=null; this.src='./images/i_want.png';">
+                <span class="slot-text">${iWantText}</span>
             `;
             preview.appendChild(iwantPreview);
             
@@ -1520,7 +1531,7 @@ function showLoadSentenceModal() {
                     const cardPreview = document.createElement('div');
                     cardPreview.className = 'sentence-slot';
                     cardPreview.innerHTML = `
-                        <img src="${card.image}" alt="${card.textEn}">
+                        <img src="${getCardImageSrc(card)}" alt="${card.textEn}">
                         <span class="slot-text">${currentLanguage === 'en' ? card.textEn.toUpperCase() : card.textVi.toUpperCase()}</span>
                     `;
                     preview.appendChild(cardPreview);
@@ -1563,7 +1574,7 @@ function loadSentencePreset(preset) {
             slot.className = 'sentence-slot';
             slot.dataset.cardId = card.id;
             slot.innerHTML = `
-                <img src="${card.image}" alt="${card.textEn}">
+                <img src="${getCardImageSrc(card)}" alt="${card.textEn}">
                 <span class="slot-text">${currentLanguage === 'en' ? card.textEn.toUpperCase() : card.textVi.toUpperCase()}</span>
             `;
             slot.addEventListener('click', () => openCardLibrary(slot));
